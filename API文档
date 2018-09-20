@@ -26,3 +26,180 @@ REST，即Representational State Transfer的缩写，是目前最流行的一种
 客户端和服务器之间，传递这种资源的某种表现层；
 客户端通过四个HTTP指令，对服务器端资源进行操作，实现“表现层状态转化”。
 建议开发者使用REST API进行币币交易或者资产提现等操作。
+
+
+
+开启API权限    
+用户的API权限在网站的基本设置->我的API内获取。点击申请API即可获得，其中apiKey是DFEX提供给API用户的访问密钥，secretKey用于对请求参数签名的私钥。
+参数签名    
+用户提交的参数除sign外，都要参与签名。
+
+首先，将待签名字符串要求按照参数名进行排序(首先比较所有参数名的第一个字母，按abcd顺序排列，若遇到相同首字母，则看第二个字母，以此类推)。
+
+
+例如：对于如下的参数进行签名
+
+string[] parameters={"api_key=c821db84-6fbd-11e4-a9e3-c86000d26d7c","symbol=btc_usdt","type=buy","price=680","amount=1.0"};     
+生成待签名的字符串
+
+amount=1.0&api_key=c821db84-6fbd-11e4-a9e3-c86000d26d7c&price=680&symbol=btc_usdt&type=buy
+然后，将待签名字符串添加私钥参数生成最终待签名字符串。例如
+
+amount=1.0&api_key=c821db84-6fbd-11e4-a9e3-c86000d26d7c&price=680&symbol=btc_usdt&type=buy&secret_key=secretKey
+注意，&secret\_key=secretKey 为签名必传参数。
+
+
+
+最后，是利用32位MD5算法，对最终待签名字符串进行签名运算，从而得到签名结果字符串(该字符串赋值于参数sign)，MD5计算结果中字母全部大写。  
+
+
+
+接口列表
+
+下列接口中币种对顺序为：市场币-交易币，请求方式如未说明则默认http post/get均可
+1.下单 authlib/order
+
+参数：
+
+参数名	参数含义	类型	是否必传
+uid	用户标识	long	是
+symbol	币种对(btc_ltc)	string	是
+type	1.限价 2市价	int	是
+buy_or_sell	1买 2卖	int	是
+price	价格	decimal	是
+num	数量	decimal	是
+source	来源1.web2.app	int	是
+sign	签名	string	是
+api_key	公钥	string	是
+
+
+下单成功后状态为200  attachment内容为此次下单生成的订单号
+
+
+
+2.撤单authlib/cancelOrder
+
+参数名	含义	类型	是否必填
+uid	用户标识	long	是
+order_no	订单号	未成交订单取	是
+api_key
+公钥	string	是
+sign	签名	string	是
+3.获取深度authlib/deepin
+
+请求参数名	含义	类型	是否必填
+symbol	交易对(eth_ltc)	string	是
+uid	用户标识	long	是
+api_key	公钥	string	是
+sign	签名	string	是
+
+4.获取行情authlib/quote
+
+参数名	含义	类型	是否必填
+uid	用户标识	long	是
+symbol	交易对(eth_ltc)	string	是
+api_key	公钥	string	是
+sign	签名	string	是
+返回参数	
+
+
+buy	买一价	decimal
+
+sell	卖一价	decimal
+
+pointNum	挂单量精度	decimal
+
+pointPrice	价格精度	decimal
+
+entrustPriceMin	最小交易额
+decimal
+
+lowLimit	最小交易量	decimal
+
+last	最新成交价	decimal
+
+5.获取账号authlib/account
+
+参数名	含义	类型	是否必填
+uid	用户标识	long	是
+api_key	公钥	string	是
+sign	签名	string	是
+
+6.获取未成交单authlib/unTradeOrder
+
+参数名	含义	类型	是否必填
+uid	用户标识	long	是
+symbol	交易对信息	string	是
+api_key	公钥	string	是
+sign	签名	string	是
+size	条数	int	否
+
+7.交易单状态 authlib/orderStatus
+参数名
+含义	类型	是否必填
+order_no	交易单号	string	是
+返回参数	订单状态	
+返回样式
+attachment	tradeNum和status的外层key	json	{"attachment":{"tradeNum":100.0,"status":2},"status":200,"message":null}
+tradeNum	成交数量	decimal
+
+status	0未成交，1部分成交，2已成交，4已撤单，5部分撤单, 404无此单
+int	
+8.成交记录authlib/tradeOrder
+参数名
+含义	类型	是否必填
+uid	用户标识	long	是
+api_key
+交易单号	string	是
+symbol
+交易对信息	string
+是
+sign
+签名	string
+是
+返回参数	订单状态	
+返回样式
+
+9.获取所有币种
+http://39.105.95.57/polarisex/coin/coins
+请求方式 post
+请求参数 无
+返回参数名
+含义	类型
+currencyId	币种id	number
+currencyName	币种名称	string
+currencyNameEn	币种英文名	string
+
+
+错误码列表：
+200	成功
+2001	委托失败
+2002	委托类型错误
+2003	买卖方向错误
+2004	委托数量错误
+2005	委托价格错误
+2006	交易币种不存在
+              以下是用户状态
+2000	用户状态异常
+2010	用户状态锁定
+2011	需要实名认证
+2012	需要设置密码
+2013	交易密码错误
+2014	没有买入委托权限
+2015	没有卖出委托权限
+              以下是余额判定
+2021	可用余额不足
+                委托限额校验
+2031	委托价格超出限制
+2032	委托数量超限
+2033	委托总金额超限
+               币种权限校验
+2041	币种未上线
+2042	币种暂停买入委托
+2043	币种暂停卖出委托
+                    市价权限
+2052	没有对手单
+                       撤单
+2060	撤单失败
+2061	委托单已成交
+2062	委托单不存在
